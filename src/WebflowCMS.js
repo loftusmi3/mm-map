@@ -6,7 +6,6 @@ class WebflowCMS {
     this.baseUrl = 'https://api.webflow.com';
     this.cache = new Map();
     this.cacheExpiry = 5 * 60 * 1000; // 5 minutes
-    this.pageSize = 100; // Webflow CMS default page limit
   }
 
   getCachedData(key) {
@@ -24,49 +23,6 @@ class WebflowCMS {
     });
   }
 
-  // Fetches all pages from a paginated Webflow CMS endpoint.
-  // Webflow caps responses at 100 items; this loops with offset
-  // until every item has been retrieved.
-  async fetchAllPages(baseUrl) {
-    const limit = this.pageSize;
-    let offset = 0;
-    let allItems = [];
-
-    while (true) {
-      const separator = baseUrl.includes('?') ? '&' : '?';
-      const url = `${baseUrl}${separator}offset=${offset}&limit=${limit}`;
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const items = data.items || data;
-
-      if (!Array.isArray(items) || items.length === 0) {
-        break;
-      }
-
-      allItems = allItems.concat(items);
-
-      // Stop when response includes a total and we've collected them all
-      if (data.total != null && allItems.length >= data.total) {
-        break;
-      }
-
-      // Fewer items than the limit means we've hit the last page
-      if (items.length < limit) {
-        break;
-      }
-
-      offset += limit;
-    }
-
-    console.log(`Fetched ${allItems.length} total items from ${baseUrl}`);
-    return allItems;
-  }
-
   async fetchMonuments() {
     const cacheKey = 'monuments';
     const cachedData = this.getCachedData(cacheKey);
@@ -79,7 +35,14 @@ class WebflowCMS {
     const monumentsUrl = 'https://mm1-fe52fb-7bc93d167bfbe6de86cc672332aa.webflow.io/api/api/monuments.json';
 
     try {
-      const items = await this.fetchAllPages(monumentsUrl);
+      const response = await fetch(monumentsUrl);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const items = data.items || data;
 
       const processedData = items.map(item => {
         const fieldData = item.fieldData || item;
@@ -121,7 +84,14 @@ class WebflowCMS {
     const ecosystemUrl = 'https://mm1-fe52fb-7bc93d167bfbe6de86cc672332aa.webflow.io/api/api/ecosystem.json';
 
     try {
-      const items = await this.fetchAllPages(ecosystemUrl);
+      const response = await fetch(ecosystemUrl);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const items = data.items || data;
 
       const processedData = items.map(item => {
         const fieldData = item.fieldData || item;
